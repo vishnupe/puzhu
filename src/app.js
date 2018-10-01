@@ -3,7 +3,8 @@ import {
     dataChannelIncomingSubject,
     dataChannelOutgoingSubject,
     dataChannelOpenedEvent,
-    dataChannelClosedEvent
+    dataChannelClosedEvent,
+    dataChannelClosingSubject
 } from './communication';
 
 var food;
@@ -23,7 +24,6 @@ var sColor2 = {
 
 let snakes = window.snakes = {};
 
-var tailLength = 50;
 var snakeSize = 32;
 var gamePaused = true;
 var highScore = 50;
@@ -36,10 +36,11 @@ function setup() {
     console.log('setup')
     var iHeight = window.innerHeight <= 542 ? window.innerHeight - 20 : 522;
     var iWidth = window.innerWidth <= 957 ? window.innerWidth - 20 : 937;
-    createCanvas(iWidth, iHeight);
+    createCanvas(500, 500);
     snakes['mySnake'] = {
-        s: new Snake(width / 4, height / 2, sColor),
-        ghost: new Ghost()
+        s: new Snake(width / 4, height / 2, sColor, 50, 'mySnake'),
+        g: new Ghost(),
+        // tailLength: 50
     };
     // pickLocation();
 }
@@ -53,7 +54,7 @@ function draw() {
     // text("high score: " + localStorage.getItem("_highScore"), width / 8, 60);
     Object.keys(snakes).forEach((key) => {
         let s = snakes[key].s;
-        let ghost = snakes[key].ghost;
+        let ghost = snakes[key].g;
         if (!gamePaused) {
             ghost.update();
             ghost.show();
@@ -61,8 +62,8 @@ function draw() {
             var ghostVect = createVector(ghost.x, ghost.y);
 
             if (food && s.eat(food)) {
-                if (tailLength > localStorage.getItem("_highScore")) {
-                    localStorage._highScore = tailLength;
+                if (s.tailLength > localStorage.getItem("_highScore")) {
+                    localStorage._highScore = s.tailLength;
                 }
                 pickLocation();
             }
@@ -101,7 +102,9 @@ function keyPressed() {
     broadcastMessage({
         keyCode
     });
-    hanldeKeyPressed(keyCode, snakes['mySnake'].ghost);
+    if (snakes['mySnake']) {
+        hanldeKeyPressed(keyCode, snakes['mySnake'].g);
+    }
 }
 
 function hanldeKeyPressed(keyCode, ghost) {
@@ -126,7 +129,7 @@ function hanldeKeyPressed(keyCode, ghost) {
     }
 }
 
-function Snake(x, y, color) {
+function Snake(x, y, color, tailLength, clientId) {
     this.acceleration = createVector(0, 0);
     this.velocity = createVector(0, 0);
     this.position = createVector(x, y);
@@ -135,13 +138,15 @@ function Snake(x, y, color) {
     this.maxforce = 0.2;
     this.history = [];
     this.eatingVal = 0;
+    this.tailLength = tailLength;
+    this.clientId = clientId
 
     // Method to update location
     this.update = function () {
         var v = createVector(this.position.x, this.position.y);
         this.history.push(v);
 
-        if (this.history.length > tailLength) {
+        if (this.history.length > this.tailLength) {
             this.history.splice(0, 1);
         }
         // Update velocity
@@ -180,17 +185,26 @@ function Snake(x, y, color) {
 
     this.reset = function () {
         // gamePaused = true;
-        var that = this;
+        // var that = this;
         // this.history.forEach(function (seg) {
         //     seg.add(random(-10, 10), random(-10, 10));
         // });
         // setTimeout(function () {
-        gamePaused = true;
-        tailLength = 50;
-        that.history = [];
-        that.position = createVector(width / 2, height / 2);
-        gamePaused = false;
+        // gamePaused = true;
+        // this.tailLength = 50;
+        // this.history = [];
+        // this.position = createVector(width / 2, height / 2);
+        // gamePaused = false;
         // }, 3000);
+        
+        
+        
+        // if (this.clientId === 'mySnake') {
+        //     delete snakes['mySnake'];
+        //     alert('Refresh to restart!');
+        // } else {
+        //     dataChannelClosingSubject.next(this.clientId);
+        // }
     }
 
     this.death = function () {
@@ -213,7 +227,7 @@ function Snake(x, y, color) {
     this.eat = function (pos) {
         var d = dist(this.position.x, this.position.y, pos.x, pos.y);
         if (d < foodDiameter) {
-            tailLength += 20;
+            this.tailLength += 20;
             this.eatingVal = 20;
             return true;
         } else {
@@ -264,11 +278,11 @@ function Snake(x, y, color) {
     };
 }
 
-function Ghost() {
-    this.x = 0;
-    this.y = width / 2;
-    this.xspeed = 5;
-    this.yspeed = 0;
+function Ghost(x = 0, y = width / 2, xspeed = 3, yspeed = 0) {
+    this.x = x;
+    this.y = y;
+    this.xspeed = xspeed;
+    this.yspeed = yspeed;
 
     this.dir = function (x, y) {
         this.xspeed = x * 5;
@@ -296,27 +310,58 @@ const broadcastMessage = (message) => {
     });
 }
 dataChannelOpenedEvent.subscribe((event) => {
-    console.log('Opened', event.clientId)
-    snakes[event.clientId] = {
-        s: new Snake(width / 4, height / 2, sColor2),
-        ghost: new Ghost()
-    }
-    gamePaused = false;
-    if (!food) {
-        pickLocation();
+    console.log('Opened', event.clientId);
+    if (snakes['mySnake']) {
+        broadcastMessage({
+            snake: {
+                x: snakes['mySnake'].s.position.x,
+                y: snakes['mySnake'].s.position.y,
+                tailLength: snakes['mySnake'].s.tailLength
+            },
+            ghost: {
+                x: snakes['mySnake'].g.x,
+                y: snakes['mySnake'].g.y,
+                xspeed: snakes['mySnake'].g.xspeed,
+                yspeed: snakes['mySnake'].g.yspeed,
+            }
+        })
     }
 });
 dataChannelClosedEvent.subscribe((event) => {
     delete snakes[event.clientId];
 });
 dataChannelIncomingSubject.subscribe((message) => {
-    if (snakes[message.clientId]) {
-        if (message.message.keyCode) {
-            hanldeKeyPressed(message.message.keyCode, snakes[message.clientId].ghost);
-        } else if (message.message.newFoodLoc) {
+    // if (snakes[message.clientId]) {
+    if (message.message.snake) {
+        if (snakes[message.clientId]) {
+            snakes[message.clientId].s.position = createVector(message.message.snake.x, message.message.snake.y);
+            snakes[message.clientId].s.tailLength = message.message.snake.tailLength;
+
+            snakes[message.clientId].g.x = message.message.ghost.x;
+            snakes[message.clientId].g.y = message.message.ghost.y;
+            snakes[message.clientId].g.xspeed = message.message.ghost.xspeed;
+            snakes[message.clientId].g.yspeed = message.message.ghost.yspeed;
+        } else {
+            snakes[message.clientId] = {
+                s: new Snake(message.message.snake.x, message.message.snake.y, sColor2, message.message.snake.tailLength, message.clientId),
+                g: new Ghost(message.message.ghost.x, message.message.ghost.y = width, message.message.ghost.xspeed, message.message.ghost.yspeed)
+            }
+            // Start game if paused
+            gamePaused = false;
+        }
+        if (!food) {
+            pickLocation();
+        }
+    } else if (message.message.keyCode) {
+        if (snakes[message.clientId]) {
+            hanldeKeyPressed(message.message.keyCode, snakes[message.clientId].g);
+        }
+    } else if (message.message.newFoodLoc) {
+        if (snakes[message.clientId]) {
             hanldeNewFood(message.message.newFoodLoc);
         }
     }
+    // }
 });
 window.setup = setup;
 window.draw = draw;

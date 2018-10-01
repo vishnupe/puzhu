@@ -5,6 +5,7 @@ import {
 
 export const dataChannelIncomingSubject = new Subject();
 export const dataChannelOutgoingSubject = new Subject();
+export const dataChannelClosingSubject = new Subject();
 export const dataChannelOpenedEvent = new Subject();
 export const dataChannelClosedEvent = new Subject();
 
@@ -52,6 +53,19 @@ socket.on('new_client_joined', function (clientId, numClient) {
     console.log('new_client_joined', clientId, numClient);
     // isInitiator = false;
     createPeerConnection(true, configuration, clientId);
+});
+
+socket.on('client_left', (clientId) => {
+    console.log(clientId, 'Left');
+    if (peerConnections[clientId]) {
+        delete peerConnections[clientId]
+    }
+    if (dataChannels[clientId]) {
+        delete dataChannels[clientId]
+    }
+    dataChannelClosedEvent.next({
+        clientId
+    });
 });
 
 socket.on('message', (fromId, message) => {
@@ -134,9 +148,10 @@ function createPeerConnection(isInitiator, config, clientId) {
 
 function onDataChannelCreated(channel, clientId) {
     // console.log('CHANNEL created!!!');
+    let outgoingSubscription;
     channel.onopen = function () {
         // console.log('CHANNEL opened!!!');
-        dataChannelOutgoingSubject.subscribe(message => {
+        outgoingSubscription = dataChannelOutgoingSubject.subscribe(message => {
             let newMessage = Object.assign({}, message, {
                 clientId: myClientid
             })
@@ -145,12 +160,30 @@ function onDataChannelCreated(channel, clientId) {
         dataChannelOpenedEvent.next({
             clientId
         });
+        dataChannelClosingSubject.subscribe((closingClientId) => {
+            if (closingClientId === clientId) {
+                console.log('Closing channel', clientId);
+                channel.close();
+                dataChannelClosedEvent.next({
+                    clientId
+                });
+            }
+        })
     };
     channel.onmessage = (message) => {
         dataChannelIncomingSubject.next(JSON.parse(message.data));
     }
     channel.onclose = () => {
         console.log('Closed');
+        if (peerConnections[clientId]) {
+            delete peerConnections[clientId]
+        }
+        if (dataChannels[clientId]) {
+            delete dataChannels[clientId]
+        }
+        if (!outgoingSubscription.closed) {
+            outgoingSubscription.unsubscribe();
+        }
         dataChannelClosedEvent.next({
             clientId
         });
