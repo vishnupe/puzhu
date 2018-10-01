@@ -7,7 +7,7 @@ import {
     dataChannelClosingSubject
 } from './communication';
 
-var food;
+var food = [];
 var foodDiameter = 24;
 
 var sColor = {
@@ -60,13 +60,26 @@ function draw() {
             ghost.show();
 
             var ghostVect = createVector(ghost.x, ghost.y);
-
-            if (food && s.eat(food)) {
-                if (s.tailLength > localStorage.getItem("_highScore")) {
-                    localStorage._highScore = s.tailLength;
+            food.forEach((foodItem, index) => {
+                if(s.eat(foodItem)) {
+                    if (s.tailLength > localStorage.getItem("_highScore")) {
+                        localStorage._highScore = s.tailLength;
+                    }
+                    food.splice(index, 1);
+                    if (food.length === 0) {
+                        pickLocation();
+                    }
                 }
-                pickLocation();
-            }
+            });
+            // if (food.length > 0 && s.eat(food[0])) {
+            //     if (s.tailLength > localStorage.getItem("_highScore")) {
+            //         localStorage._highScore = s.tailLength;
+            //     }
+            //     food.shift();
+            //     if (food.length === 0) {
+            //         pickLocation();
+            //     }
+            // }
 
             // snake follows the ghost to steer
             s.seek(ghostVect);
@@ -75,10 +88,10 @@ function draw() {
         }
         s.display();
     })
-    if (food) {
+    food.forEach((foodItem) => {
         fill(255, 0, 100);
-        ellipse(food.x, food.y, foodDiameter, foodDiameter);
-    }
+        ellipse(foodItem.x, foodItem.y, foodDiameter, foodDiameter);
+    });
 }
 
 function pickLocation() {
@@ -95,7 +108,7 @@ function pickLocation() {
 }
 
 function hanldeNewFood(newFoodLoc) {
-    food = createVector(newFoodLoc.x, newFoodLoc.y);
+    food.push(createVector(newFoodLoc.x, newFoodLoc.y));
 }
 
 function keyPressed() {
@@ -349,7 +362,7 @@ dataChannelIncomingSubject.subscribe((message) => {
             // Start game if paused
             gamePaused = false;
         }
-        if (!food) {
+        if (food.length === 0) {
             pickLocation();
         }
     } else if (message.message.keyCode) {
