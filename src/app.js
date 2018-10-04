@@ -1,4 +1,3 @@
-console.log("Hurray!");
 import {
     dataChannelIncomingSubject,
     dataChannelOutgoingSubject,
@@ -6,8 +5,14 @@ import {
     dataChannelClosedEvent,
     dataChannelClosingSubject
 } from './communication';
+import {
+    randomToken
+} from './utils';
+import {
+    MESSAGE_TYPE
+} from './message-type';
 
-var food = [];
+var food = {};
 var foodDiameter = 24;
 
 var sColor = {
@@ -28,20 +33,23 @@ var snakeSize = 32;
 var gamePaused = true;
 var highScore = 50;
 
-if (localStorage.getItem("_highScore") === null) {
-    localStorage._highScore = highScore;
-}
+let leaderBoard = document.getElementById('leaderBoard');
+
+// if (localStorage.getItem("_highScore") === null) {
+//     localStorage._highScore = highScore;
+// }
 
 function setup() {
     console.log('setup')
     var iHeight = window.innerHeight <= 542 ? window.innerHeight - 20 : 522;
     var iWidth = window.innerWidth <= 957 ? window.innerWidth - 20 : 937;
-    createCanvas(500, 500);
-    snakes['mySnake'] = {
-        s: new Snake(width / 4, height / 2, sColor, 50, 'mySnake'),
+    createCanvas(900, 600);
+    window.mySnake = snakes['mySnake'] = {
+        s: new Snake(width / 4, height / 2, 0, 0, 0, 0, sColor, 50, 'mySnake'),
         g: new Ghost(),
         // tailLength: 50
     };
+
     // pickLocation();
 }
 
@@ -52,23 +60,46 @@ function draw() {
     // textSize(16);
     // text("tail length: " + tailLength, width / 8, 30);
     // text("high score: " + localStorage.getItem("_highScore"), width / 8, 60);
-    Object.keys(snakes).forEach((key) => {
-        let s = snakes[key].s;
-        let ghost = snakes[key].g;
+    Object.keys(snakes).forEach((snakeId) => {
+        let s = snakes[snakeId].s;
+        let ghost = snakes[snakeId].g;
         if (!gamePaused) {
             ghost.update();
             ghost.show();
 
             var ghostVect = createVector(ghost.x, ghost.y);
-            food.forEach((foodItem, index) => {
-                if(s.eat(foodItem)) {
+            Object.keys(food).forEach((key) => {
+                if (s.eat(food[key])) {
                     if (s.tailLength > localStorage.getItem("_highScore")) {
                         localStorage._highScore = s.tailLength;
+                        localStorage._highClient = s.clientId;
                     }
-                    food.splice(index, 1);
-                    if (food.length === 0) {
+                    if (s.clientId === 'mySnake') {
+                        broadcastMessage({
+                            type: MESSAGE_TYPE.EAT_EVENT,
+                            snake: {
+                                x: s.position.x,
+                                y: s.position.y,
+                                tailLength: s.tailLength
+                            },
+                            ghost: {
+                                x: ghost.x,
+                                y: ghost.y,
+                                xspeed: ghost.xspeed,
+                                yspeed: ghost.yspeed,
+                            },
+                            foodId: key
+                        })
+                    }
+                    delete food[key];
+                    if (Object.keys(food).length === 0) {
                         pickLocation();
                     }
+                    leaderBoard.innerHTML = `<span class="high-score">HIGH SCORE <span class="client-id">${localStorage._highClient}:</span> ${localStorage._highScore}</span>`;
+                    Object.keys(snakes).forEach((snakeId) => {
+                        let s = snakes[snakeId].s;
+                        leaderBoard.innerHTML += `</br> <span class="client-id">${s.clientId}:</span>  ${s.tailLength}`;
+                    });
                 }
             });
             // if (food.length > 0 && s.eat(food[0])) {
@@ -88,9 +119,9 @@ function draw() {
         }
         s.display();
     })
-    food.forEach((foodItem) => {
+    Object.keys(food).forEach((key) => {
         fill(255, 0, 100);
-        ellipse(foodItem.x, foodItem.y, foodDiameter, foodDiameter);
+        ellipse(food[key].x, food[key].y, foodDiameter, foodDiameter);
     });
 }
 
@@ -99,20 +130,23 @@ function pickLocation() {
     console.log('Creating food');
     let newFoodLoc = {
         x: random(offset, width - offset),
-        y: random(offset, height - offset)
+        y: random(offset, height - offset),
+        key: randomToken()
     };
     broadcastMessage({
+        type: MESSAGE_TYPE.NEW_FOOD,
         newFoodLoc
     });
     hanldeNewFood(newFoodLoc);
 }
 
 function hanldeNewFood(newFoodLoc) {
-    food.push(createVector(newFoodLoc.x, newFoodLoc.y));
+    food[newFoodLoc.key] = createVector(newFoodLoc.x, newFoodLoc.y);
 }
 
 function keyPressed() {
     broadcastMessage({
+        type: MESSAGE_TYPE.KEY_EVENT,
         keyCode
     });
     if (snakes['mySnake']) {
@@ -142,10 +176,13 @@ function hanldeKeyPressed(keyCode, ghost) {
     }
 }
 
-function Snake(x, y, color, tailLength, clientId) {
-    this.acceleration = createVector(0, 0);
-    this.velocity = createVector(0, 0);
-    this.position = createVector(x, y);
+function Snake(posX, posY, velX, velY, accX, accY, color, tailLength, clientId) {
+    // this.acceleration = createVector(0, 0);
+    // this.velocity = createVector(0, 0);
+    // this.position = createVector(x, y);
+    this.acceleration = createVector(accX, accY);
+    this.velocity = createVector(velX, velY);
+    this.position = createVector(posX, posY);
     this.r = snakeSize;
     this.maxspeed = 3;
     this.maxforce = 0.2;
@@ -199,19 +236,23 @@ function Snake(x, y, color, tailLength, clientId) {
     this.reset = function () {
         // gamePaused = true;
         // var that = this;
-        // this.history.forEach(function (seg) {
-        //     seg.add(random(-10, 10), random(-10, 10));
-        // });
-        // setTimeout(function () {
-        // gamePaused = true;
-        // this.tailLength = 50;
-        // this.history = [];
-        // this.position = createVector(width / 2, height / 2);
-        // gamePaused = false;
-        // }, 3000);
-        
-        
-        
+        this.history.forEach(function (seg) {
+            seg.add(random(-10, 10), random(-10, 10));
+        });
+        setTimeout(() => {
+            this.tailLength = 50;
+            this.history = [];
+            this.position = createVector(width / 2, height / 2);
+            leaderBoard.innerHTML = `<span class="high-score">HIGH SCORE <span class="client-id">${localStorage._highClient}:</span> ${localStorage._highScore}</span>`;
+            Object.keys(snakes).forEach((snakeId) => {
+                let s = snakes[snakeId].s;
+                leaderBoard.innerHTML += `</br> <span class="client-id">${s.clientId}:</span>  ${s.tailLength}`;
+            });
+            // gamePaused = false;
+        }, 500);
+
+
+
         // if (this.clientId === 'mySnake') {
         //     delete snakes['mySnake'];
         //     alert('Refresh to restart!');
@@ -227,13 +268,25 @@ function Snake(x, y, color, tailLength, clientId) {
         if (outOfBoundsX || outOfBoundsY) {
             this.reset();
         } else {
-            for (var i = 0; i < this.history.length - 10; i++) {
-                var pos = this.history[i];
-                var d = dist(this.position.x, this.position.y, pos.x, pos.y);
-                if (d < 2) {
-                    this.reset();
+            // for (var i = 0; i < this.history.length - 10; i++) {
+            //     var pos = this.history[i];
+            //     var d = dist(this.position.x, this.position.y, pos.x, pos.y);
+            //     if (d < 2) {
+            //         this.reset();
+            //     }
+            // }
+            Object.keys(snakes).forEach((snakeId) => {
+                if (snakeId !== this.clientId) {
+                    let s = snakes[snakeId].s;
+                    for (var i = 0; i < s.history.length - 10; i++) {
+                        var pos = s.history[i];
+                        var d = dist(this.position.x, this.position.y, pos.x, pos.y);
+                        if (d < 2) {
+                            this.reset();
+                        }
+                    }
                 }
-            }
+            });
         }
     }
 
@@ -326,9 +379,14 @@ dataChannelOpenedEvent.subscribe((event) => {
     console.log('Opened', event.clientId);
     if (snakes['mySnake']) {
         broadcastMessage({
+            type: MESSAGE_TYPE.NEW_SNAKE,
             snake: {
-                x: snakes['mySnake'].s.position.x,
-                y: snakes['mySnake'].s.position.y,
+                posX: snakes['mySnake'].s.position.x,
+                posY: snakes['mySnake'].s.position.y,
+                velX: snakes['mySnake'].s.velocity.x,
+                velY: snakes['mySnake'].s.velocity.y,
+                accX: snakes['mySnake'].s.acceleration.x,
+                accY: snakes['mySnake'].s.position.y,
                 tailLength: snakes['mySnake'].s.tailLength
             },
             ghost: {
@@ -344,37 +402,69 @@ dataChannelClosedEvent.subscribe((event) => {
     delete snakes[event.clientId];
 });
 dataChannelIncomingSubject.subscribe((message) => {
-    // if (snakes[message.clientId]) {
-    if (message.message.snake) {
-        if (snakes[message.clientId]) {
-            snakes[message.clientId].s.position = createVector(message.message.snake.x, message.message.snake.y);
-            snakes[message.clientId].s.tailLength = message.message.snake.tailLength;
+    console.log('Message', message);
+    switch (message.message.type) {
+        case MESSAGE_TYPE.NEW_SNAKE:
+            if (snakes[message.clientId]) {
+                // snakes[message.clientId].s.position = createVector(message.message.snake.posX, message.message.snake.posY);
+                // snakes[message.clientId].s.acceleration = createVector(message.message.snake.accX, message.message.snake.accY);
+                // snakes[message.clientId].s.velocity = createVector(message.message.snake.velX, message.message.snake.velY);
+                // snakes[message.clientId].s.tailLength = message.message.snake.tailLength;
 
-            snakes[message.clientId].g.x = message.message.ghost.x;
-            snakes[message.clientId].g.y = message.message.ghost.y;
-            snakes[message.clientId].g.xspeed = message.message.ghost.xspeed;
-            snakes[message.clientId].g.yspeed = message.message.ghost.yspeed;
-        } else {
-            snakes[message.clientId] = {
-                s: new Snake(message.message.snake.x, message.message.snake.y, sColor2, message.message.snake.tailLength, message.clientId),
-                g: new Ghost(message.message.ghost.x, message.message.ghost.y = width, message.message.ghost.xspeed, message.message.ghost.yspeed)
+                // snakes[message.clientId].g.x = message.message.ghost.x;
+                // snakes[message.clientId].g.y = message.message.ghost.y;
+                // snakes[message.clientId].g.xspeed = message.message.ghost.xspeed;
+                // snakes[message.clientId].g.yspeed = message.message.ghost.yspeed;
+            } else {
+                snakes[message.clientId] = {
+                    s: new Snake(message.message.snake.posX, message.message.snake.posY, message.message.snake.velX, message.message.snake.velY, message.message.snake.accX, message.message.snake.accY, sColor2, message.message.snake.tailLength, message.clientId),
+                    g: new Ghost(message.message.ghost.x, message.message.ghost.y, message.message.ghost.xspeed, message.message.ghost.yspeed)
+                }
+                // Start game if paused
+                gamePaused = false;
             }
-            // Start game if paused
-            gamePaused = false;
-        }
-        if (food.length === 0) {
-            pickLocation();
-        }
-    } else if (message.message.keyCode) {
-        if (snakes[message.clientId]) {
-            hanldeKeyPressed(message.message.keyCode, snakes[message.clientId].g);
-        }
-    } else if (message.message.newFoodLoc) {
-        if (snakes[message.clientId]) {
-            hanldeNewFood(message.message.newFoodLoc);
-        }
+            if (Object.keys(food).length === 0) {
+                pickLocation();
+            }
+            break;
+        case MESSAGE_TYPE.KEY_EVENT:
+            if (snakes[message.clientId]) {
+                hanldeKeyPressed(message.message.keyCode, snakes[message.clientId].g);
+            }
+            break;
+        case MESSAGE_TYPE.NEW_FOOD:
+            if (snakes[message.clientId]) {
+                hanldeNewFood(message.message.newFoodLoc);
+            }
+            break;
+        case MESSAGE_TYPE.EAT_EVENT:
+            let snakeId = message.clientId;
+            if (food[message.message.foodId]) {
+                console.log('Deleting food')
+                delete food[message.message.foodId];
+            }
+            if (snakes[snakeId] && snakes[snakeId].s.tailLength < message.message.snake.tailLength) {
+                // snakes[message.clientId].s.position = createVector(message.message.snake.posX, message.message.snake.posY);
+                // snakes[message.clientId].s.acceleration = createVector(message.message.snake.accX, message.message.snake.accY);
+                // snakes[message.clientId].s.velocity = createVector(message.message.snake.velX, message.message.snake.velY);
+                snakes[message.clientId].s.tailLength = message.message.snake.tailLength;
+
+                // snakes[message.clientId].g.x = message.message.ghost.x;
+                // snakes[message.clientId].g.y = message.message.ghost.y;
+                // snakes[message.clientId].g.xspeed = message.message.ghost.xspeed;
+                // snakes[message.clientId].g.yspeed = message.message.ghost.yspeed;
+            }
+            if (snakes[message.clientId].s.tailLength > localStorage.getItem("_highScore")) {
+                localStorage._highScore = snakes[message.clientId].s.tailLength;
+                localStorage._highClient = message.clientId;
+            }
+            leaderBoard.innerHTML = `<span class="high-score">HIGH SCORE <span class="client-id">${localStorage._highClient}:</span> ${localStorage._highScore}</span>`;
+            Object.keys(snakes).forEach((snakeId) => {
+                let s = snakes[snakeId].s;
+                leaderBoard.innerHTML += `</br> <span class="client-id">${s.clientId}:</span>  ${s.tailLength}`;
+            });
+            break;
     }
-    // }
 });
 window.setup = setup;
 window.draw = draw;
