@@ -89,7 +89,7 @@ const config = {
         ]
     },
     plugins: [
-        new CleanWebpackPlugin(["dist"]),
+        // new CleanWebpackPlugin(["dist"]),
         new HtmlWebpackPlugin({
             template: "index.html",
         }),
