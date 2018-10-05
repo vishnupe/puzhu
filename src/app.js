@@ -13,7 +13,7 @@ import {
 } from './message-type';
 
 var food = {};
-var foodDiameter = 24;
+var foodDiameter = 16;
 
 var sColor = {
     r: 0,
@@ -29,7 +29,7 @@ var sColor2 = {
 
 let snakes = window.snakes = {};
 
-var snakeSize = 32;
+var snakeSize = 24;
 var gamePaused = true;
 var highScore = 50;
 
@@ -72,7 +72,7 @@ function draw() {
                 if (s.eat(food[key])) {
                     if (s.tailLength > localStorage.getItem("_highScore")) {
                         localStorage._highScore = s.tailLength;
-                        localStorage._highClient = s.clientId;
+                        localStorage._highClient = s.name;
                     }
                     if (s.clientId === 'mySnake') {
                         broadcastMessage({
@@ -98,7 +98,7 @@ function draw() {
                     leaderBoard.innerHTML = `<span class="high-score">HIGH SCORE <span class="client-id">${localStorage._highClient}:</span> ${localStorage._highScore}</span>`;
                     Object.keys(snakes).forEach((snakeId) => {
                         let s = snakes[snakeId].s;
-                        leaderBoard.innerHTML += `</br> <span class="client-id">${s.clientId}:</span>  ${s.tailLength}`;
+                        leaderBoard.innerHTML += `</br> <span class="client-id">${s.name}:</span>  ${s.tailLength}`;
                     });
                 }
             });
@@ -189,7 +189,8 @@ function Snake(posX, posY, velX, velY, accX, accY, color, tailLength, clientId) 
     this.history = [];
     this.eatingVal = 0;
     this.tailLength = tailLength;
-    this.clientId = clientId
+    this.clientId = clientId;
+    this.name = clientId;
 
     // Method to update location
     this.update = function () {
@@ -246,7 +247,7 @@ function Snake(posX, posY, velX, velY, accX, accY, color, tailLength, clientId) 
             leaderBoard.innerHTML = `<span class="high-score">HIGH SCORE <span class="client-id">${localStorage._highClient}:</span> ${localStorage._highScore}</span>`;
             Object.keys(snakes).forEach((snakeId) => {
                 let s = snakes[snakeId].s;
-                leaderBoard.innerHTML += `</br> <span class="client-id">${s.clientId}:</span>  ${s.tailLength}`;
+                leaderBoard.innerHTML += `</br> <span class="client-id">${s.name}:</span>  ${s.tailLength}`;
             });
             // gamePaused = false;
         }, 500);
@@ -378,6 +379,12 @@ const broadcastMessage = (message) => {
 dataChannelOpenedEvent.subscribe((event) => {
     console.log('Opened', event.clientId);
     if (snakes['mySnake']) {
+        document.getElementById('text-box-container').style.display = 'block';
+        leaderBoard.innerHTML = `<span class="high-score">HIGH SCORE <span class="client-id">${localStorage._highClient || 'NA'}:</span> ${localStorage._highScore  || 'NA'}</span>`;
+        Object.keys(snakes).forEach((snakeId) => {
+            let s = snakes[snakeId].s;
+            leaderBoard.innerHTML += `</br> <span class="client-id">${s.name}:</span>  ${s.tailLength}`;
+        });
         broadcastMessage({
             type: MESSAGE_TYPE.NEW_SNAKE,
             snake: {
@@ -400,6 +407,7 @@ dataChannelOpenedEvent.subscribe((event) => {
 });
 dataChannelClosedEvent.subscribe((event) => {
     delete snakes[event.clientId];
+    localStorage.clear();
 });
 dataChannelIncomingSubject.subscribe((message) => {
     console.log('Message', message);
@@ -456,16 +464,32 @@ dataChannelIncomingSubject.subscribe((message) => {
             }
             if (snakes[message.clientId].s.tailLength > localStorage.getItem("_highScore")) {
                 localStorage._highScore = snakes[message.clientId].s.tailLength;
-                localStorage._highClient = message.clientId;
+                localStorage._highClient = snakes[message.clientId].s.name;
             }
             leaderBoard.innerHTML = `<span class="high-score">HIGH SCORE <span class="client-id">${localStorage._highClient}:</span> ${localStorage._highScore}</span>`;
             Object.keys(snakes).forEach((snakeId) => {
                 let s = snakes[snakeId].s;
-                leaderBoard.innerHTML += `</br> <span class="client-id">${s.clientId}:</span>  ${s.tailLength}`;
+                leaderBoard.innerHTML += `</br> <span class="client-id">${s.name}:</span>  ${s.tailLength}`;
             });
+            break;
+        case MESSAGE_TYPE.NAME_EVENT:
+            if (snakes[message.clientId]) {
+                snakes[message.clientId].s.name = message.message.name;
+            }
             break;
     }
 });
+window.submitName = () => {
+    let name = document.getElementById('name-text-box').value;
+    if (name && snakes['mySnake']) {
+        snakes['mySnake'].s.name = name;
+        broadcastMessage({
+            type: MESSAGE_TYPE.NAME_EVENT,
+            name
+        });
+        document.getElementById('text-box-container').style.display = 'none';
+    }
+}
 window.setup = setup;
 window.draw = draw;
 window.keyPressed = keyPressed;

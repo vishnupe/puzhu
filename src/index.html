@@ -35,10 +35,18 @@
             color: blue;
             font-style: italic;
         }
+        #text-box-container {
+            margin: 0 auto;
+            display: none;
+        }
     </style>
 </head>
 
 <body>
+    <div id="text-box-container">
+        <input id="name-text-box" type="text" name="name" />
+        <button onclick="submitName()">Add Name</button>
+    </div>
     <div id="leaderBoard"></div>
 </body>
 

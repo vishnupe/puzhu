@@ -3,4 +3,5 @@ export const MESSAGE_TYPE = {
     NEW_SNAKE: 'NEW_SNAKE',
     NEW_FOOD: 'NEW_FOOD',
     KEY_EVENT: 'KEY_EVENT',
+    NAME_EVENT: 'NAME_EVENT'
 }
