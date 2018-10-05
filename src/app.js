@@ -45,7 +45,7 @@ function setup() {
     var iWidth = window.innerWidth <= 957 ? window.innerWidth - 20 : 937;
     createCanvas(900, 600);
     window.mySnake = snakes['mySnake'] = {
-        s: new Snake(width / 4, height / 2, 0, 0, 0, 0, sColor, 50, 'mySnake'),
+        s: new Snake(width / 4, height / 2, 0, 0, 0, 0, sColor, 50, 'mySnake', 'mySnake'),
         g: new Ghost(),
         // tailLength: 50
     };
@@ -95,7 +95,7 @@ function draw() {
                     if (Object.keys(food).length === 0) {
                         pickLocation();
                     }
-                    leaderBoard.innerHTML = `<span class="high-score">HIGH SCORE <span class="client-id">${localStorage._highClient}:</span> ${localStorage._highScore}</span>`;
+                    leaderBoard.innerHTML = `<div class="high-score">HIGH SCORE <span class="client-id">${localStorage._highClient}:</span> ${localStorage._highScore}</div>`;
                     Object.keys(snakes).forEach((snakeId) => {
                         let s = snakes[snakeId].s;
                         leaderBoard.innerHTML += `</br> <span class="client-id">${s.name}:</span>  ${s.tailLength}`;
@@ -176,7 +176,7 @@ function hanldeKeyPressed(keyCode, ghost) {
     }
 }
 
-function Snake(posX, posY, velX, velY, accX, accY, color, tailLength, clientId) {
+function Snake(posX, posY, velX, velY, accX, accY, color, tailLength, clientId, name) {
     // this.acceleration = createVector(0, 0);
     // this.velocity = createVector(0, 0);
     // this.position = createVector(x, y);
@@ -190,7 +190,7 @@ function Snake(posX, posY, velX, velY, accX, accY, color, tailLength, clientId) 
     this.eatingVal = 0;
     this.tailLength = tailLength;
     this.clientId = clientId;
-    this.name = clientId;
+    this.name = name;
 
     // Method to update location
     this.update = function () {
@@ -244,7 +244,7 @@ function Snake(posX, posY, velX, velY, accX, accY, color, tailLength, clientId) 
             this.tailLength = 50;
             this.history = [];
             this.position = createVector(width / 2, height / 2);
-            leaderBoard.innerHTML = `<span class="high-score">HIGH SCORE <span class="client-id">${localStorage._highClient}:</span> ${localStorage._highScore}</span>`;
+            leaderBoard.innerHTML = `<div class="high-score">HIGH SCORE <span class="client-id">${localStorage._highClient  || 'NA'}:</span> ${localStorage._highScore  || 'NA'}</div>`;
             Object.keys(snakes).forEach((snakeId) => {
                 let s = snakes[snakeId].s;
                 leaderBoard.innerHTML += `</br> <span class="client-id">${s.name}:</span>  ${s.tailLength}`;
@@ -380,7 +380,7 @@ dataChannelOpenedEvent.subscribe((event) => {
     console.log('Opened', event.clientId);
     if (snakes['mySnake']) {
         document.getElementById('text-box-container').style.display = 'block';
-        leaderBoard.innerHTML = `<span class="high-score">HIGH SCORE <span class="client-id">${localStorage._highClient || 'NA'}:</span> ${localStorage._highScore  || 'NA'}</span>`;
+        leaderBoard.innerHTML = `<div class="high-score">HIGH SCORE <span class="client-id">${localStorage._highClient || 'NA'}:</span> ${localStorage._highScore  || 'NA'}</div>`;
         Object.keys(snakes).forEach((snakeId) => {
             let s = snakes[snakeId].s;
             leaderBoard.innerHTML += `</br> <span class="client-id">${s.name}:</span>  ${s.tailLength}`;
@@ -401,7 +401,8 @@ dataChannelOpenedEvent.subscribe((event) => {
                 y: snakes['mySnake'].g.y,
                 xspeed: snakes['mySnake'].g.xspeed,
                 yspeed: snakes['mySnake'].g.yspeed,
-            }
+            },
+            name: snakes['mySnake'].s.name
         })
     }
 });
@@ -425,7 +426,16 @@ dataChannelIncomingSubject.subscribe((message) => {
                 // snakes[message.clientId].g.yspeed = message.message.ghost.yspeed;
             } else {
                 snakes[message.clientId] = {
-                    s: new Snake(message.message.snake.posX, message.message.snake.posY, message.message.snake.velX, message.message.snake.velY, message.message.snake.accX, message.message.snake.accY, sColor2, message.message.snake.tailLength, message.clientId),
+                    s: new Snake(
+                        message.message.snake.posX,
+                        message.message.snake.posY,
+                        message.message.snake.velX,
+                        message.message.snake.velY,
+                        message.message.snake.accX,
+                        message.message.snake.accY,
+                        sColor2, message.message.snake.tailLength,
+                        message.clientId,
+                        message.message.name !== 'mySnake' ? message.message.name : message.clientId),
                     g: new Ghost(message.message.ghost.x, message.message.ghost.y, message.message.ghost.xspeed, message.message.ghost.yspeed)
                 }
                 // Start game if paused
@@ -466,7 +476,7 @@ dataChannelIncomingSubject.subscribe((message) => {
                 localStorage._highScore = snakes[message.clientId].s.tailLength;
                 localStorage._highClient = snakes[message.clientId].s.name;
             }
-            leaderBoard.innerHTML = `<span class="high-score">HIGH SCORE <span class="client-id">${localStorage._highClient}:</span> ${localStorage._highScore}</span>`;
+            leaderBoard.innerHTML = `<div class="high-score">HIGH SCORE <span class="client-id">${localStorage._highClient  || 'NA'}:</span> ${localStorage._highScore  || 'NA'}</div>`;
             Object.keys(snakes).forEach((snakeId) => {
                 let s = snakes[snakeId].s;
                 leaderBoard.innerHTML += `</br> <span class="client-id">${s.name}:</span>  ${s.tailLength}`;
@@ -483,6 +493,11 @@ window.submitName = () => {
     let name = document.getElementById('name-text-box').value;
     if (name && snakes['mySnake']) {
         snakes['mySnake'].s.name = name;
+        leaderBoard.innerHTML = `<div class="high-score">HIGH SCORE <span class="client-id">${localStorage._highClient  || 'NA'}:</span> ${localStorage._highScore  || 'NA'}</div>`;
+        Object.keys(snakes).forEach((snakeId) => {
+            let s = snakes[snakeId].s;
+            leaderBoard.innerHTML += `</br> <span class="client-id">${s.name}:</span>  ${s.tailLength}`;
+        });
         broadcastMessage({
             type: MESSAGE_TYPE.NAME_EVENT,
             name
