@@ -40,7 +40,8 @@ let leaderBoard = document.getElementById('leaderBoard');
 // }
 
 function setup() {
-    console.log('setup')
+    console.log('setup');
+    localStorage.clear();
     var iHeight = window.innerHeight <= 542 ? window.innerHeight - 20 : 522;
     var iWidth = window.innerWidth <= 957 ? window.innerWidth - 20 : 937;
     createCanvas(900, 600);
@@ -408,7 +409,6 @@ dataChannelOpenedEvent.subscribe((event) => {
 });
 dataChannelClosedEvent.subscribe((event) => {
     delete snakes[event.clientId];
-    localStorage.clear();
 });
 dataChannelIncomingSubject.subscribe((message) => {
     console.log('Message', message);
