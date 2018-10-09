@@ -308,6 +308,7 @@ function Snake(posX, posY, velX, velY, accX, accY, color, tailLength, clientId, 
         var theta = this.velocity.heading() + PI / 2;
         fill(color.r, color.g, color.b);
         noStroke();
+        // text("high score: " + localStorage.getItem("_highScore"), width / 8, 60);
         for (var i = 0; i < this.history.length; i++) {
             var pos = this.history[i];
             var size = map(i, 0, this.history.length, 5, this.r);
@@ -343,6 +344,11 @@ function Snake(posX, posY, velX, velY, accX, accY, color, tailLength, clientId, 
             text("X", 1, 0);
         }
         pop();
+        fill(116, 54, 147);
+        textSize(12);
+        if (this.history.length > 0) {
+            text(this.name, this.history[0].x, this.history[0].y);
+        }
     };
 }
 
