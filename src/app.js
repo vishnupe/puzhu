@@ -11,30 +11,8 @@ import {
 import {
     MESSAGE_TYPE
 } from './message-type';
+import { writeData } from './data-logger'
 
-// Firebase App is always required and must be first
-const firebase = require("firebase/app");
-
-// Add additional services that you want to use
-require("firebase/auth");
-require("firebase/database");
-
-const config = {
-    apiKey: "AIzaSyBapZ1t2AIPwbS-A8z6uDg0-uGWc6m-FQg",
-    authDomain: "puzhu-bot.firebaseapp.com",
-    databaseURL: "https://puzhu-bot.firebaseio.com/",
-};
-firebase.initializeApp(config);
-
-// Get a reference to the database service
-const database = firebase.database();
-
-const writeDataToFirebase = (data) => {
-    const newPostKey = firebase.database().ref().child('trainData').push().key;
-    let updates = {};
-    updates['/trainData/' + newPostKey] = data;
-    firebase.database().ref().update(updates);
-}
 
 var food = {};
 var foodDiameter = 16;
@@ -165,16 +143,10 @@ function keyPressed() {
         type: MESSAGE_TYPE.KEY_EVENT,
         keyCode
     });
-    writeDataToFirebase({
+    writeData({
         gameState: getGameState(),
         keyCode
-    }, (error) => {
-        if (error) {
-            console.log('Write failed');
-        } else {
-            console.log('Write Success')
-        }
-    })
+    });
     if (snakes['mySnake']) {
         hanldeKeyPressed(keyCode, snakes['mySnake'].g);
     }
