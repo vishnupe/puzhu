@@ -12,6 +12,30 @@ import {
     MESSAGE_TYPE
 } from './message-type';
 
+// Firebase App is always required and must be first
+const firebase = require("firebase/app");
+
+// Add additional services that you want to use
+require("firebase/auth");
+require("firebase/database");
+
+const config = {
+    apiKey: "AIzaSyBapZ1t2AIPwbS-A8z6uDg0-uGWc6m-FQg",
+    authDomain: "puzhu-bot.firebaseapp.com",
+    databaseURL: "https://puzhu-bot.firebaseio.com/",
+};
+firebase.initializeApp(config);
+
+// Get a reference to the database service
+const database = firebase.database();
+
+const writeDataToFirebase = (data) => {
+    const newPostKey = firebase.database().ref().child('trainData').push().key;
+    let updates = {};
+    updates['/trainData/' + newPostKey] = data;
+    firebase.database().ref().update(updates);
+}
+
 var food = {};
 var foodDiameter = 16;
 
@@ -34,10 +58,6 @@ var gamePaused = true;
 var highScore = 50;
 
 let leaderBoard = document.getElementById('leaderBoard');
-
-// if (localStorage.getItem("_highScore") === null) {
-//     localStorage._highScore = highScore;
-// }
 
 function setup() {
     console.log('setup');
@@ -96,11 +116,7 @@ function draw() {
                     if (Object.keys(food).length === 0) {
                         pickLocation();
                     }
-                    leaderBoard.innerHTML = `<div class="high-score">HIGH SCORE <span class="client-id">${localStorage._highClient}:</span> ${localStorage._highScore}</div>`;
-                    Object.keys(snakes).forEach((snakeId) => {
-                        let s = snakes[snakeId].s;
-                        leaderBoard.innerHTML += `</br> <span class="client-id">${s.name}:</span>  ${s.tailLength}`;
-                    });
+                    updateLeaderBoard();
                 }
             });
             // if (food.length > 0 && s.eat(food[0])) {
@@ -128,7 +144,6 @@ function draw() {
 
 function pickLocation() {
     var offset = 40;
-    console.log('Creating food');
     let newFoodLoc = {
         x: random(offset, width - offset),
         y: random(offset, height - offset),
@@ -150,8 +165,54 @@ function keyPressed() {
         type: MESSAGE_TYPE.KEY_EVENT,
         keyCode
     });
+    writeDataToFirebase({
+        gameState: getGameState(),
+        keyCode
+    }, (error) => {
+        if (error) {
+            console.log('Write failed');
+        } else {
+            console.log('Write Success')
+        }
+    })
     if (snakes['mySnake']) {
         hanldeKeyPressed(keyCode, snakes['mySnake'].g);
+    }
+}
+
+const getGameState = () => {
+    let otherSnakesState = [];
+    let foodState = [];
+    let mySnakeState = snakes['mySnake'].s.history.map(vec => {
+        return {
+            x: Math.round(vec.x),
+            y: Math.round(vec.y)
+        }
+    });
+
+    for (let player in snakes) {
+        if (player !== 'mySnake') {
+            otherSnakesState.push(
+                snakes[player].s.history.map(vec => {
+                    return {
+                        x: Math.round(vec.x),
+                        y: Math.round(vec.y)
+                    }
+                })
+            )
+        }
+    }
+    for (let foodItem in food) {
+        foodState.push({
+            x: Math.round(food[foodItem].x),
+            y: Math.round(food[foodItem].y)
+        })
+    }
+
+    return {
+        mySnakeState,
+        otherSnakesState,
+        foodState
     }
 }
 
@@ -245,22 +306,9 @@ function Snake(posX, posY, velX, velY, accX, accY, color, tailLength, clientId, 
             this.tailLength = 50;
             this.history = [];
             this.position = createVector(width / 2, height / 2);
-            leaderBoard.innerHTML = `<div class="high-score">HIGH SCORE <span class="client-id">${localStorage._highClient  || 'NA'}:</span> ${localStorage._highScore  || 'NA'}</div>`;
-            Object.keys(snakes).forEach((snakeId) => {
-                let s = snakes[snakeId].s;
-                leaderBoard.innerHTML += `</br> <span class="client-id">${s.name}:</span>  ${s.tailLength}`;
-            });
+            updateLeaderBoard();
             // gamePaused = false;
         }, 500);
-
-
-
-        // if (this.clientId === 'mySnake') {
-        //     delete snakes['mySnake'];
-        //     alert('Refresh to restart!');
-        // } else {
-        //     dataChannelClosingSubject.next(this.clientId);
-        // }
     }
 
     this.death = function () {
@@ -270,13 +318,6 @@ function Snake(posX, posY, velX, velY, accX, accY, color, tailLength, clientId, 
         if (outOfBoundsX || outOfBoundsY) {
             this.reset();
         } else {
-            // for (var i = 0; i < this.history.length - 10; i++) {
-            //     var pos = this.history[i];
-            //     var d = dist(this.position.x, this.position.y, pos.x, pos.y);
-            //     if (d < 2) {
-            //         this.reset();
-            //     }
-            // }
             Object.keys(snakes).forEach((snakeId) => {
                 if (snakeId !== this.clientId) {
                     let s = snakes[snakeId].s;
@@ -387,11 +428,7 @@ dataChannelOpenedEvent.subscribe((event) => {
     console.log('Opened', event.clientId);
     if (snakes['mySnake']) {
         document.getElementById('text-box-container').style.display = 'block';
-        leaderBoard.innerHTML = `<div class="high-score">HIGH SCORE <span class="client-id">${localStorage._highClient || 'NA'}:</span> ${localStorage._highScore  || 'NA'}</div>`;
-        Object.keys(snakes).forEach((snakeId) => {
-            let s = snakes[snakeId].s;
-            leaderBoard.innerHTML += `</br> <span class="client-id">${s.name}:</span>  ${s.tailLength}`;
-        });
+        updateLeaderBoard();
         broadcastMessage({
             type: MESSAGE_TYPE.NEW_SNAKE,
             snake: {
@@ -417,7 +454,6 @@ dataChannelClosedEvent.subscribe((event) => {
     delete snakes[event.clientId];
 });
 dataChannelIncomingSubject.subscribe((message) => {
-    console.log('Message', message);
     switch (message.message.type) {
         case MESSAGE_TYPE.NEW_SNAKE:
             if (snakes[message.clientId]) {
@@ -464,7 +500,6 @@ dataChannelIncomingSubject.subscribe((message) => {
         case MESSAGE_TYPE.EAT_EVENT:
             let snakeId = message.clientId;
             if (food[message.message.foodId]) {
-                console.log('Deleting food')
                 delete food[message.message.foodId];
             }
             if (snakes[snakeId] && snakes[snakeId].s.tailLength < message.message.snake.tailLength) {
@@ -482,11 +517,7 @@ dataChannelIncomingSubject.subscribe((message) => {
                 localStorage._highScore = snakes[message.clientId].s.tailLength;
                 localStorage._highClient = snakes[message.clientId].s.name;
             }
-            leaderBoard.innerHTML = `<div class="high-score">HIGH SCORE <span class="client-id">${localStorage._highClient  || 'NA'}:</span> ${localStorage._highScore  || 'NA'}</div>`;
-            Object.keys(snakes).forEach((snakeId) => {
-                let s = snakes[snakeId].s;
-                leaderBoard.innerHTML += `</br> <span class="client-id">${s.name}:</span>  ${s.tailLength}`;
-            });
+            updateLeaderBoard();
             break;
         case MESSAGE_TYPE.NAME_EVENT:
             if (snakes[message.clientId]) {
@@ -499,18 +530,21 @@ window.submitName = () => {
     let name = document.getElementById('name-text-box').value;
     if (name && snakes['mySnake']) {
         snakes['mySnake'].s.name = name;
-        leaderBoard.innerHTML = `<div class="high-score">HIGH SCORE <span class="client-id">${localStorage._highClient  || 'NA'}:</span> ${localStorage._highScore  || 'NA'}</div>`;
-        Object.keys(snakes).forEach((snakeId) => {
-            let s = snakes[snakeId].s;
-            leaderBoard.innerHTML += `</br> <span class="client-id">${s.name}:</span>  ${s.tailLength}`;
-        });
         broadcastMessage({
             type: MESSAGE_TYPE.NAME_EVENT,
             name
         });
         document.getElementById('text-box-container').style.display = 'none';
+        updateLeaderBoard();
     }
 }
 window.setup = setup;
 window.draw = draw;
 window.keyPressed = keyPressed;
+const updateLeaderBoard = () => {
+    leaderBoard.innerHTML = `<div class="high-score">HIGH SCORE <span class="client-id">${localStorage._highClient  || 'NA'}:</span> ${localStorage._highScore  || 'NA'}</div>`;
+    Object.keys(snakes).forEach((snakeId) => {
+        let s = snakes[snakeId].s;
+        leaderBoard.innerHTML += `</br> <span class="client-id">${s.name}:</span>  ${s.tailLength}`;
+    });
+}
