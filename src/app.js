@@ -143,12 +143,12 @@ function keyPressed() {
         type: MESSAGE_TYPE.KEY_EVENT,
         keyCode
     });
-    writeData({
-        gameState: getGameState(),
-        keyCode
-    });
-    if (snakes['mySnake']) {
+    if (snakes['mySnake'] && !gamePaused) {
         hanldeKeyPressed(keyCode, snakes['mySnake'].g);
+        writeData({
+            gameState: getGameState(),
+            keyCode
+        });
     }
 }
 
