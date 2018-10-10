@@ -23,8 +23,13 @@
             padding: 0;
         }
 
-        #leaderBoard {
+        #leaderBoard, #messageBoard {
             margin: 0 auto;
+            text-align: center;
+        }
+
+        #gameUrl {
+            color: blue;
         }
 
         .high-score {
@@ -49,6 +54,14 @@
         <button onclick="submitName()">Add Name</button>
     </div>
     <div id="leaderBoard"></div>
+    <div id="messageBoard">
+        Share the below url to invite friends and start the game.
+        </br>
+        <span id="gameUrl"></span>
+        </br></br>
+        <a id="homeUrl" href="">Click here to create new Room</a>
+
+    </div>
 </body>
 
 </html>

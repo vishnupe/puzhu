@@ -11,7 +11,9 @@ import {
 import {
     MESSAGE_TYPE
 } from './message-type';
-import { writeData } from './data-logger'
+import {
+    writeData
+} from './data-logger'
 
 
 var food = {};
@@ -48,7 +50,8 @@ function setup() {
         g: new Ghost(),
         // tailLength: 50
     };
-
+    document.getElementById('gameUrl').innerHTML = window.location;
+    document.getElementById('homeUrl').href = window.location.href.split('#')[0];
     // pickLocation();
 }
 
