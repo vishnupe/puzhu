@@ -4,7 +4,7 @@ import { fireBaseKey, fireBaseDomain, fireBaseDBUrl } from './secrets';
 // Add additional services that you want to use
 require("firebase/auth/dist/index.cjs");
 require("firebase/database/dist/index.cjs");
-
+window.isTrainingEnabled = false;
 const config = {
     apiKey: fireBaseKey,
     authDomain: fireBaseDomain,
@@ -16,8 +16,10 @@ firebase.initializeApp(config);
 const database = firebase.database();
 
 export const writeData = (data) => {
-    const newPostKey = firebase.database().ref().child('trainData').push().key;
-    let updates = {};
-    updates['/trainData/' + newPostKey] = data;
-    firebase.database().ref().update(updates).catch(() => console.log('Write Failed'));
+    if(window.isTrainingEnabled) {
+        const newPostKey = firebase.database().ref().child('trainData').push().key;
+        let updates = {};
+        updates['/trainData/' + newPostKey] = data;
+        firebase.database().ref().update(updates).catch(() => console.log('Write Failed'));
+    }
 }

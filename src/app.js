@@ -33,11 +33,13 @@ var sColor2 = {
 
 let snakes = window.snakes = {};
 
-var snakeSize = 24;
-var gamePaused = true;
-var highScore = 50;
+let snakeSize = 24;
+let gamePaused = true;
+let highScore = 50;
+let lastKeyStrokeTime = Date.now();
 
 let leaderBoard = document.getElementById('leaderBoard');
+const getTimeDifference = (timeStamp) => Date.now() - timeStamp;
 
 function setup() {
     console.log('setup');
@@ -48,20 +50,25 @@ function setup() {
     window.mySnake = snakes['mySnake'] = {
         s: new Snake(width / 4, height / 2, 0, 0, 0, 0, sColor, 50, 'mySnake', 'mySnake'),
         g: new Ghost(),
-        // tailLength: 50
     };
     document.getElementById('gameUrl').innerHTML = window.location;
     document.getElementById('homeUrl').href = window.location.href.split('#')[0];
-    // pickLocation();
+    // Register nokey logger
+    setInterval(() => {
+        let idleTime = getTimeDifference(lastKeyStrokeTime);
+        if (snakes['mySnake'] && !gamePaused && idleTime > 3000 && idleTime < 30000) {
+            writeData({
+                gameState: getGameState(),
+                keyCode: -1
+            });
+        }
+    }, 2000);
 }
 
 function draw() {
     background(245, 248, 250);
     noStroke();
     fill(54);
-    // textSize(16);
-    // text("tail length: " + tailLength, width / 8, 30);
-    // text("high score: " + localStorage.getItem("_highScore"), width / 8, 60);
     Object.keys(snakes).forEach((snakeId) => {
         let s = snakes[snakeId].s;
         let ghost = snakes[snakeId].g;
@@ -100,15 +107,6 @@ function draw() {
                     updateLeaderBoard();
                 }
             });
-            // if (food.length > 0 && s.eat(food[0])) {
-            //     if (s.tailLength > localStorage.getItem("_highScore")) {
-            //         localStorage._highScore = s.tailLength;
-            //     }
-            //     food.shift();
-            //     if (food.length === 0) {
-            //         pickLocation();
-            //     }
-            // }
 
             // snake follows the ghost to steer
             s.seek(ghostVect);
@@ -142,6 +140,7 @@ function hanldeNewFood(newFoodLoc) {
 }
 
 function keyPressed() {
+    lastKeyStrokeTime = Date.now();
     broadcastMessage({
         type: MESSAGE_TYPE.KEY_EVENT,
         keyCode
@@ -214,9 +213,6 @@ function hanldeKeyPressed(keyCode, ghost) {
 }
 
 function Snake(posX, posY, velX, velY, accX, accY, color, tailLength, clientId, name) {
-    // this.acceleration = createVector(0, 0);
-    // this.velocity = createVector(0, 0);
-    // this.position = createVector(x, y);
     this.acceleration = createVector(accX, accY);
     this.velocity = createVector(velX, velY);
     this.position = createVector(posX, posY);
@@ -324,7 +320,6 @@ function Snake(posX, posY, velX, velY, accX, accY, color, tailLength, clientId, 
         var theta = this.velocity.heading() + PI / 2;
         fill(color.r, color.g, color.b);
         noStroke();
-        // text("high score: " + localStorage.getItem("_highScore"), width / 8, 60);
         for (var i = 0; i < this.history.length; i++) {
             var pos = this.history[i];
             var size = map(i, 0, this.history.length, 5, this.r);
