@@ -11,9 +11,6 @@ import {
 import {
     MESSAGE_TYPE
 } from './message-type';
-import {
-    writeData
-} from './data-logger'
 
 
 var food = {};
@@ -54,15 +51,15 @@ function setup() {
     document.getElementById('gameUrl').innerHTML = window.location;
     document.getElementById('homeUrl').href = window.location.href.split('#')[0];
     // Register nokey logger
-    setInterval(() => {
-        let idleTime = getTimeDifference(lastKeyStrokeTime);
-        if (snakes['mySnake'] && !gamePaused && idleTime > 3000 && idleTime < 30000) {
-            writeData({
-                gameState: getGameState(),
-                keyCode: -1
-            });
-        }
-    }, 2000);
+    // setInterval(() => {
+    //     let idleTime = getTimeDifference(lastKeyStrokeTime);
+    //     if (snakes['mySnake'] && !gamePaused && idleTime > 3000 && idleTime < 30000) {
+    //         writeData({
+    //             gameState: getGameState(),
+    //             keyCode: -1
+    //         });
+    //     }
+    // }, 2000);
 }
 
 function draw() {
@@ -147,10 +144,10 @@ function keyPressed() {
     });
     if (snakes['mySnake'] && !gamePaused) {
         hanldeKeyPressed(keyCode, snakes['mySnake'].g);
-        writeData({
-            gameState: getGameState(),
-            keyCode
-        });
+        // writeData({
+        //     gameState: getGameState(),
+        //     keyCode
+        // });
     }
 }
 

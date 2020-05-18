@@ -23,8 +23,9 @@
             padding: 0;
         }
 
-        #leaderBoard, #messageBoard {
-            margin: 0 auto;
+        #leaderBoard,
+        #messageBoard {
+            margin: 16px auto;
             text-align: center;
         }
 
@@ -37,30 +38,39 @@
             padding-bottom: 10px;
             flex-direction: column;
         }
+
         .client-id {
             color: blue;
             font-style: italic;
         }
+
         #text-box-container {
             margin: 0 auto;
             display: none;
+        }
+        #main {
+            display: flex;
+            flex-direction: column-reverse;
+            justify-content: center;
         }
     </style>
 </head>
 
 <body>
-    <div id="text-box-container">
-        <input id="name-text-box" type="text" name="name" />
-        <button onclick="submitName()">Add Name</button>
-    </div>
-    <div id="leaderBoard"></div>
-    <div id="messageBoard">
-        Share the below url to invite friends and start the game.
-        </br>
-        <span id="gameUrl"></span>
-        </br></br>
-        <a id="homeUrl" href="">Click here to create new Room</a>
+    <div id="main">
+        <div id="text-box-container">
+            <input id="name-text-box" type="text" name="name" />
+            <button onclick="submitName()">Add Name</button>
+        </div>
+        <div id="leaderBoard"></div>
+        <div id="messageBoard">
+            Share the below url to invite friends and start the game.
+            </br>
+            <span id="gameUrl"></span>
+            </br></br>
+            <a id="homeUrl" href="">Click here to create new Room</a>
 
+        </div>
     </div>
 </body>
 

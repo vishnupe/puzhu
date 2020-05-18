@@ -72,7 +72,7 @@ socket.on('message', (fromId, message) => {
     var currentConnection = peerConnections[fromId];
     if (currentConnection) {
         if (message.type === 'offer') {
-            currentConnection.setRemoteDescription(new RTCSessionDescription(message), () => {},
+            currentConnection.setRemoteDescription(new RTCSessionDescription(message), () => { },
                 logError);
             currentConnection.createAnswer((desc) => {
                 currentConnection.setLocalDescription(desc, () => {
@@ -82,15 +82,16 @@ socket.on('message', (fromId, message) => {
 
         } else if (message.type === 'answer') {
             // console.log('Got answer.');
-            currentConnection.setRemoteDescription(new RTCSessionDescription(message), () => {},
+            currentConnection.setRemoteDescription(new RTCSessionDescription(message), () => { },
                 logError);
 
         } else if (message.type === 'candidate') {
-            currentConnection.addIceCandidate(new RTCIceCandidate({
-                candidate: message.candidate
-            })).catch((err) => {
+            currentConnection.addIceCandidate(new RTCIceCandidate(
+                message.candidate
+            )).catch((err) => {
                 console.log(err)
             });
+
 
         } else if (message === 'bye') {
             // TODO: cleanup RTC connection?
@@ -124,9 +125,9 @@ function createPeerConnection(isInitiator, config, clientId) {
                 type: 'candidate',
                 label: event.candidate.sdpMLineIndex,
                 id: event.candidate.sdpMid,
-                candidate: event.candidate.candidate
+                candidate: event.candidate
             });
-        } else {}
+        } else { }
     };
 
     if (isInitiator) {
