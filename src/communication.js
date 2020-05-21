@@ -17,7 +17,9 @@ let socket = io('https://lazy-signaling-server.herokuapp.com/');
 
 let configuration = {
     'iceServers': [{
-        'urls': 'stun:stun.l.google.com:19302'
+        url: 'turn:numb.viagenie.ca',
+        credential: 'muazkh',
+        username: 'webrtc@live.com'
     }]
 };
 
@@ -26,7 +28,7 @@ let isInitiator;
 let peerConnections = {};
 let dataChannels = {};
 window.peerConnections = peerConnections;
-
+window.remoteAudioTracks = [];
 // Create a random room if not already present in the URL.
 let room = window.location.hash.substring(1);
 if (!room) {
@@ -117,6 +119,27 @@ function sendMessage(toClientid, message) {
 function createPeerConnection(isInitiator, config, clientId) {
     // console.log('Creating Peer connection as initiator?', isInitiator, 'config:', config);
     let peerConn = peerConnections[clientId] = new RTCPeerConnection(config);
+    if(window.localAudioStream) {
+        window.localAudioStream.getAudioTracks().forEach((track) => {
+            console.log('here')
+            peerConn.addTrack(track, window.localAudioStream);
+        });
+    }
+    
+    peerConn.ontrack = (event) => {
+        console.log('Got peer stream', event);
+        window.remoteAudioTracks = window.remoteAudioTracks.concat(event.streams[0].getAudioTracks())
+        const ac = new AudioContext();
+        const audioStream = new MediaStream();
+        window.remoteAudioTracks.forEach((track) => {
+            audioStream.addTrack(track)
+        })
+        // WebAudio MediaStream sources only use the first track.
+        const audioSource = ac.createMediaStreamSource(audioStream);
+        audioSource.connect(ac.destination)
+
+        document.getElementById('audio').srcObject = audioStream;
+    };
     // send any ice candidates to the other peer
     peerConn.onicecandidate = function (event) {
         console.log('icecandidate event:', event.candidate);

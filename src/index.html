@@ -48,16 +48,36 @@
             margin: 0 auto;
             display: none;
         }
+
         #main {
             display: flex;
             flex-direction: column-reverse;
             justify-content: center;
         }
+
+        .header {
+            display: flex;
+            flex-direction: row;
+            justify-content: center;
+            margin-top: 2rem;
+        }
+
+        .social-icon {
+            width: 3.5rem;
+            height: 3.5rem;
+            opacity: 0.8;
+        }
+
+        .social-icon:hover {
+            opacity: 1;
+        }
     </style>
 </head>
 
 <body>
+    <audio hidden id="audio" autoplay controls></audio>
     <div id="main">
+
         <div id="text-box-container">
             <input id="name-text-box" type="text" name="name" />
             <button onclick="submitName()">Add Name</button>
@@ -70,6 +90,10 @@
             </br></br>
             <a id="homeUrl" href="">Click here to create new Room</a>
 
+        </div>
+        <div class="header">
+            <a target="_blank" href="https://github.com/vishnupe"><img class="social-icon" src="github.png" /></a>
+            <!-- <a target="_blank" href="https://www.facebook.com/vishnu.govnd"><img class="social-icon" src="fb.png" /></a> -->
         </div>
     </div>
 </body>

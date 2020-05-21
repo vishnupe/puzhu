@@ -11,7 +11,16 @@ import {
 import {
     MESSAGE_TYPE
 } from './message-type';
-
+navigator.mediaDevices.getUserMedia({
+    video: false,
+    audio: true
+}).then((myStream) => {
+    window.localAudioStream = myStream;
+    console.log('Got my stream');
+    // initCommunication();
+}).catch((error) => {
+    console.log(error);
+});
 
 var food = {};
 var foodDiameter = 16;
@@ -509,7 +518,7 @@ window.setup = setup;
 window.draw = draw;
 window.keyPressed = keyPressed;
 const updateLeaderBoard = () => {
-    leaderBoard.innerHTML = `<div class="high-score">HIGH SCORE <span class="client-id">${localStorage._highClient  || 'NA'}:</span> ${localStorage._highScore  || 'NA'}</div>`;
+    leaderBoard.innerHTML = `<div class="high-score">HIGH SCORE <span class="client-id">${localStorage._highClient || 'NA'}:</span> ${localStorage._highScore || 'NA'}</div>`;
     Object.keys(snakes).forEach((snakeId) => {
         let s = snakes[snakeId].s;
         leaderBoard.innerHTML += `</br> <span class="client-id">${s.name}:</span>  ${s.tailLength}`;
