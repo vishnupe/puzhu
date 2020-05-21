@@ -17,6 +17,7 @@ navigator.mediaDevices.getUserMedia({
 }).then((myStream) => {
     window.localAudioStream = myStream;
     console.log('Got my stream');
+    document.getElementById("mute").style.display = 'block';
     // initCommunication();
 }).catch((error) => {
     console.log(error);
@@ -524,3 +525,19 @@ const updateLeaderBoard = () => {
         leaderBoard.innerHTML += `</br> <span class="client-id">${s.name}:</span>  ${s.tailLength}`;
     });
 }
+function toggleAudio() {
+    if (window.localAudioStream) {
+        if (window.localAudioStream.getAudioTracks()[0].enabled) {
+            window.localAudioStream.getAudioTracks()[0].enabled = false;
+            document.getElementById("unmute").style.display = 'block';
+            document.getElementById("mute").style.display = 'none';
+
+        } else {
+            window.localAudioStream.getAudioTracks()[0].enabled = true;
+            document.getElementById("mute").style.display = 'block';
+            document.getElementById("unmute").style.display = 'none';
+
+        }
+    }
+}
+window.toggleAudio = toggleAudio;

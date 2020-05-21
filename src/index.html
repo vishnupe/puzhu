@@ -71,13 +71,23 @@
         .social-icon:hover {
             opacity: 1;
         }
+        #mute, #unmute {
+            display: none;
+            margin-top: 2rem;
+            width: max-content;
+            align-self: center;
+            font-weight: bold;
+            padding: 0.5rem;
+            font-size: 1rem;
+        }
     </style>
 </head>
 
 <body>
     <audio hidden id="audio" autoplay controls></audio>
     <div id="main">
-
+        <button id="mute" onclick="toggleAudio()">Mute</button>
+        <button id="unmute" onclick="toggleAudio()">Unmute</button>
         <div id="text-box-container">
             <input id="name-text-box" type="text" name="name" />
             <button onclick="submitName()">Add Name</button>
